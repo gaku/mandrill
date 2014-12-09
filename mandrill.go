@@ -46,6 +46,18 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+type HttpError struct {
+	Status int
+}
+
+func newHttpError(response *napping.Response) *HttpError {
+	return &HttpError{Status: response.Status()}
+}
+
+func (err *HttpError) Error() string {
+	return fmt.Sprintf("http error: %d", err.Status)
+}
+
 // type Attachment holds necessary information for an attachment
 // Mime - the MIME type of the attachment
 // Name - the name of the attachment
@@ -77,13 +89,17 @@ func do(url string, data interface{}, result interface{}) error {
 		Result: result,
 		Error:  err}
 
-	status, errs := napping.Send(rr)
+	response, errs := napping.Send(rr)
+	if response.Status() != 200 {
+		return newHttpError(response)
+	}
+	fmt.Println(response)
 
 	if errs == nil {
 		return nil
 	}
 
-	fmt.Println(status, rr.Error)
+	fmt.Println(response, rr.Error)
 
 	return errs
 }
