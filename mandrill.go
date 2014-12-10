@@ -31,6 +31,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/jmcvetta/napping"
+	"encoding/json"
 )
 
 // API key for Mandrill user. You should set this to your API key before calling
@@ -81,6 +82,9 @@ func (err *Error) Error() string {
 // do is an easy function for performing requests against Mandrill's API.
 func do(url string, data interface{}, result interface{}) error {
 	err := newError()
+	d, _ := json.Marshal(data)
+
+	fmt.Println(string(d))
 
 	rr := &napping.Request{
 		Url:    "https://mandrillapp.com/api/1.0" + url,
@@ -154,6 +158,8 @@ type Message struct {
 	To []*To `json:"to"`
 	// global merge variables to use for all recipients
 	GlobalMergeVars []*variable `json:"global_merge_vars,omitempty"`
+	// merge veriables to users
+	MergeVars []*mergeVar `json:"merge_vars,omitempty"`
 	// Mandrill tags
 	Tags []string `json:"tags,omitempty"`
 	// message message metadata
@@ -189,6 +195,14 @@ func (msg *Message) AddGlobalMergeVars(data map[string]string) *Message {
 	msg.GlobalMergeVars = append(msg.GlobalMergeVars, mapToVars(data)...)
 	return msg
 }
+
+func (msg *Message) AddMergeVars(recipient string, data map[string]string) *Message {
+	vars := mapToVars(data)  // vars []*variable
+	entry := &mergeVar{recipient, vars}
+	msg.MergeVars = append(msg.MergeVars, entry)
+	return msg
+}
+
 
 // AddTags does what it's name says.
 func (msg *Message) AddTags(tags ...string) *Message {
@@ -261,13 +275,13 @@ func (msg *Message) SendTemplate(tmpl string, content map[string]string, async b
 	var data struct {
 		Key            string      `json:"key"`
 		TemplateName   string      `json:"template_name"`
-		TemplateConent []*variable `json:"template_content"`
+		TemplateContent []*variable `json:"template_content"`
 		Message        *Message    `json:"message,omitempty"`
 		Async          bool        `json:"async"`
 	}
 	data.Key = Key
 	data.TemplateName = tmpl
-	data.TemplateConent = mapToVars(content)
+	data.TemplateContent = mapToVars(content)
 	data.Message = msg
 	data.Async = async
 
@@ -289,8 +303,15 @@ type variable struct {
 // mapToVars converts a map to a list variable.
 func mapToVars(m map[string]string) []*variable {
 	vars := make([]*variable, 0, len(m))
-	for k, v := range m {
-		vars = append(vars, &variable{k, v})
+	if m != nil {
+		for k, v := range m {
+			vars = append(vars, &variable{k, v})
+		}
 	}
 	return vars
+}
+
+type mergeVar struct {
+	Rcpt string `json:"rcpt"`
+	Vars []*variable `json:"vars"`
 }
