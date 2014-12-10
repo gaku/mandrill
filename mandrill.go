@@ -31,7 +31,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/jmcvetta/napping"
-	"encoding/json"
 )
 
 // API key for Mandrill user. You should set this to your API key before calling
@@ -82,9 +81,6 @@ func (err *Error) Error() string {
 // do is an easy function for performing requests against Mandrill's API.
 func do(url string, data interface{}, result interface{}) error {
 	err := newError()
-	d, _ := json.Marshal(data)
-
-	fmt.Println(string(d))
 
 	rr := &napping.Request{
 		Url:    "https://mandrillapp.com/api/1.0" + url,
